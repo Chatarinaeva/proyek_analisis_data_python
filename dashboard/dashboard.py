@@ -145,8 +145,8 @@ if bike_df is not None:
         st.pyplot(fig)
 
 
-    # 🔹3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar
-    st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar")
+    # 🔹3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar Berdasarkan Hari Kerja dan Akhir Pekan
+    st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar Berdasarkan Hari Kerja dan Akhir Pekan")
 
     if {"workingday", "casual", "registered"}.issubset(filtered_df.columns):
         casual_registered_df = filtered_df.groupby("workingday")[["casual", "registered"]].sum().reset_index()
