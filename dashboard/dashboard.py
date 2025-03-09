@@ -160,6 +160,11 @@ if bike_df is not None:
         plt.legend(["Casual", "Registered"])
         st.pyplot(fig)
 
+    # 🔹 **Analisis Clustering: Permintaan Sepeda Berdasarkan Kategori dan Musim**
+    st.subheader("🔍 Analisis Clustering: Permintaan Sepeda Berdasarkan Kategori dan Musim")
+
+    st.write("Analisis ini bertujuan untuk memahami pola permintaan sepeda dengan mengelompokkan data ke dalam beberapa kategori berdasarkan jumlah permintaan dan musim. Dengan clustering ini, kita dapat melihat bagaimana permintaan sepeda bervariasi berdasarkan musim dan kategori permintaan.")
+
     # 🔹4️⃣ Distribusi Kategori Demand
     st.subheader("📊 Distribusi Kategori Demand")
     demand_distribution = filtered_df["demand_category"].value_counts()
