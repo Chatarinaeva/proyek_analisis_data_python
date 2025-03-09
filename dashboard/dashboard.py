@@ -48,22 +48,22 @@ if bike_df is not None:
         default=list(season_mapping.values())  
     )
 
-    # ✅ Konversi `start_date` dan `end_date` ke datetime sebelum filtering
+    #Konversi `start_date` dan `end_date` ke datetime sebelum filtering
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
 
-    # ✅ Filter Data Berdasarkan Sidebar
+    #Filter Data Berdasarkan Sidebar
     filtered_df = bike_df[
         (bike_df["dteday"] >= start_date) & (bike_df["dteday"] <= end_date) &
         (bike_df["season_text"].isin(selected_seasons))
     ].copy()
 
-    # ✅ Hitung ulang kategori demand setelah filtering
+    #Hitung ulang kategori demand setelah filtering
     filtered_df["demand_category"] = filtered_df["cnt"].apply(
         lambda cnt: "Low Demand" if cnt <= 300 else ("Medium Demand" if cnt <= 600 else "High Demand")
     )
 
-    # ✅ Hitung ulang kategori musim setelah filtering
+    #Hitung ulang kategori musim setelah filtering
     season_avg = filtered_df.groupby("season")["cnt"].mean().sort_values()
     if len(season_avg) >= 3:
         low_season = season_avg.index[0]
@@ -80,7 +80,7 @@ if bike_df is not None:
 
         filtered_df["season_category"] = filtered_df["season"].apply(categorize_season)
 
-    # 🔹 **Tampilkan Statistik Sebelum dan Sesudah Filtering**
+    # 🔹Tampilkan Statistik Sebelum dan Sesudah Filtering
     st.subheader("📊 Statistik Data Sebelum dan Sesudah Filtering")
     col1, col2 = st.columns(2)
     with col1:
@@ -91,11 +91,11 @@ if bike_df is not None:
         st.write("📊 **Statistik Setelah Filtering**")
         st.write(filtered_df["cnt"].describe())
 
-    # 🔹 **Tampilkan 5 Baris Data Setelah Filtering**
-    st.subheader("📋 5 Baris Pertama Data yang Ditampilkan")
+    # 🔹Tampilkan 5 Baris Data Setelah Filtering
+    st.subheader("📋 Data yang ditampilkan setelah filtering")
     st.dataframe(filtered_df.head())
 
-    # 🔹 **1️⃣ Perbedaan Jumlah Penyewaan: Hari Kerja vs Akhir Pekan**
+    # 🔹1️⃣ Perbedaan Jumlah Penyewaan: Hari Kerja vs Akhir Pekan
     st.subheader("🚴‍♂️ Jumlah Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
 
     if "workingday" in filtered_df.columns:
@@ -115,7 +115,7 @@ if bike_df is not None:
             
         st.pyplot(fig)
 
-    # 🔹 **2️⃣ Jumlah Penyewaan Sepeda Berdasarkan Musim**
+    # 🔹2️⃣ Jumlah Penyewaan Sepeda Berdasarkan Musim
     st.subheader("🌦️ Jumlah Penyewaan Sepeda Berdasarkan Musim")
 
     if "season" in filtered_df.columns:
@@ -145,7 +145,7 @@ if bike_df is not None:
         st.pyplot(fig)
 
 
-    # 🔹 **3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar**
+    # 🔹3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar
     st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar")
 
     if {"workingday", "casual", "registered"}.issubset(filtered_df.columns):
@@ -160,7 +160,7 @@ if bike_df is not None:
         plt.legend(["Casual", "Registered"])
         st.pyplot(fig)
 
-    # 🔹 **4️⃣ Distribusi Kategori Demand**
+    # 🔹4️⃣ Distribusi Kategori Demand
     st.subheader("📊 Distribusi Kategori Demand")
     demand_distribution = filtered_df["demand_category"].value_counts()
 
@@ -171,7 +171,7 @@ if bike_df is not None:
     ax.set_title("Distribusi Kategori Demand")
     st.pyplot(fig)
 
-    # 🔹 **5️⃣ Distribusi Demand Berdasarkan Musim**
+    # 🔹5️⃣ Distribusi Demand Berdasarkan Musim
     if "season_category" in filtered_df.columns:
         season_demand = filtered_df.groupby("season_category")["demand_category"].value_counts().unstack()
 
