@@ -8,6 +8,9 @@ import numpy as np
 st.set_page_config(page_title="Bike Sharing Dashboard", layout="wide")
 sns.set_style("darkgrid")
 
+# 🔹 **Judul Dashboard**
+st.title("📊 Bike Sharing Dashboard: Analisis Penyewaan Sepeda")
+
 # === Load dataset dengan caching untuk efisiensi ===
 @st.cache_data
 def load_bike_data():
@@ -99,11 +102,17 @@ if bike_df is not None:
         day_type_df = filtered_df.groupby("workingday")["cnt"].sum().reset_index()
         day_type_df["workingday"] = day_type_df["workingday"].map({0: "Akhir Pekan", 1: "Hari Kerja"})
 
-        fig, ax = plt.subplots(figsize=(8, 5))
-        sns.barplot(x="workingday", y="cnt", data=day_type_df, palette=["#72BCD4", "#FFA07A"], ax=ax)
+        fig, ax = plt.subplots(figsize=(9, 5))
+        bars = sns.barplot(x="workingday", y="cnt", data=day_type_df, palette=["#B1D0F0", "#FFA07A"], ax=ax)
         ax.set_xlabel("Hari")
         ax.set_ylabel("Jumlah Penyewaan")
         ax.set_title("Jumlah Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
+        #Tambahkan anotasi di atas batang
+        for bar in bars.patches:
+            ax.annotate(f"{bar.get_height():,.0f}", 
+                        (bar.get_x() + bar.get_width() / 2, bar.get_height()), 
+                        ha='center', va='bottom', fontsize=8, color='gray')
+            
         st.pyplot(fig)
 
     # 🔹 **2️⃣ Jumlah Penyewaan Sepeda Berdasarkan Musim**
@@ -113,12 +122,28 @@ if bike_df is not None:
         season_df = filtered_df.groupby("season")["cnt"].sum().reset_index()
         season_df["season"] = season_df["season"].map(season_mapping)
 
+        #Menentukan musim dengan jumlah penyewaan tertinggi
+        max_season = season_df.loc[season_df["cnt"].idxmax(), "season"]
+
+        #Menentukan warna: Soroti musim dengan penyewaan tertinggi (merah), lainnya abu-abu
+        colors = ["#FF9999" if season != max_season else "#CC0000" for season in season_df["season"]]
+
         fig, ax = plt.subplots(figsize=(8, 5))
-        sns.barplot(x="season", y="cnt", data=season_df, palette="coolwarm", ax=ax)
+        bars = sns.barplot(x="season", y="cnt", data=season_df, palette=colors, ax=ax)
+
         ax.set_xlabel("Musim")
         ax.set_ylabel("Jumlah Penyewaan")
         ax.set_title("Jumlah Penyewaan Sepeda Berdasarkan Musim")
+
+        #Tambahkan anotasi di atas batang
+        for bar, season in zip(bars.patches, season_df["season"]):
+            ax.annotate(f"{bar.get_height():,.0f}", 
+                        (bar.get_x() + bar.get_width() / 2, bar.get_height()), 
+                        ha='center', va='bottom', fontsize=8, 
+                        color='black' if season == max_season else 'gray')
+
         st.pyplot(fig)
+
 
     # 🔹 **3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar**
     st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar")
