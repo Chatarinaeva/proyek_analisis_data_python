@@ -15,7 +15,7 @@ st.title("📊 Bike Sharing Dashboard: Analisis Penyewaan Sepeda")
 @st.cache_data
 def load_bike_data():
     try:
-        bike_data = pd.read_csv("main_data.csv")  # Pastikan file ada di folder "dashboard"
+        bike_data = pd.read_csv("dashboard/main_data.csv")  # Pastikan file ada di folder "dashboard"
         bike_data["dteday"] = pd.to_datetime(bike_data["dteday"])  # Konversi dteday ke datetime
         return bike_data
     except FileNotFoundError:
