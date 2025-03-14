@@ -3,14 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# 🔹 Konfigurasi tampilan Streamlit
+#Konfigurasi tampilan Streamlit
 st.set_page_config(page_title="Bike Sharing Dashboard", layout="wide")
 sns.set_style("darkgrid")
 
-# Judul Dashboard
+#Judul Dashboard
 st.title("📊 Bike Sharing Dashboard: Analisis Penyewaan Sepeda")
 
-# === Load dataset ===
+# Load dataset
 @st.cache_data
 def load_bike_data():
     try:
@@ -24,7 +24,7 @@ def load_bike_data():
 bike_df = load_bike_data()
 
 if bike_df is not None:
-    # 🔹 Sidebar untuk filter tanggal dan musim
+    #Sidebar untuk filter tanggal dan musim
     st.sidebar.header("📅 Filter Data")
     min_date = bike_df["dteday"].min()
     max_date = bike_df["dteday"].max()
@@ -85,20 +85,18 @@ if bike_df is not None:
     # Mengelompokkan data berdasarkan musim dan menghitung total penyewaan
     season_df = filtered_df.groupby("season_label", observed=False)["cnt"].sum().reset_index()
 
-    # Menentukan urutan musim yang benar (agar sesuai dengan visualisasi sebelumnya)
+    # Menentukan urutan musim yang benar 
     season_order = ["Winter", "Spring", "Summer", "Fall"]
     season_df["season_label"] = pd.Categorical(season_df["season_label"], categories=season_order, ordered=True)
     season_df = season_df.sort_values("season_label")
 
-    # Menentukan warna dengan highlight pada musim dengan penyewaan tertinggi
-    highlight_color = "#D62728"  # Warna untuk penyewaan tertinggi (merah)
-    base_color = "#FFA07A"  # Warna dasar lebih soft (peach)
+    # Penentuan warna
+    highlight_color = "#D62728"  
+    base_color = "#FFA07A"  
 
-    # Menentukan musim dengan penyewaan tertinggi
     max_season = season_df.loc[season_df["cnt"].idxmax(), "season_label"]
     colors = [highlight_color if season == max_season else base_color for season in season_df["season_label"]]
 
-    # Membuat visualisasi bar chart
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(
         data=season_df,
@@ -108,12 +106,10 @@ if bike_df is not None:
         ax=ax
     )
 
-    # Menambahkan label dan judul dengan ukuran yang lebih besar
     ax.set_xlabel("Season", fontsize=12)
     ax.set_ylabel("Jumlah Penyewaan", fontsize=12)
     ax.set_title("Jumlah Penyewaan Sepeda Berdasarkan Musim (Season)", fontsize=16)
 
-    # Menampilkan plot di Streamlit
     st.pyplot(fig)
 
 
@@ -130,17 +126,16 @@ if bike_df is not None:
     fig, ax = plt.subplots(figsize=(8, 5))
     casual_registered_df.set_index("workingday").plot(kind="bar", stacked=True, colormap="viridis", ax=ax)
 
-    # Tambahkan label dan judul
     ax.set_xlabel("Kategori Hari")
     ax.set_ylabel("Jumlah Penyewaan")
     ax.set_title("Pola Penyewaan Sepeda Berdasarkan Hari Kerja vs Akhir Pekan")
 
-    # Tambahkan legenda
+
     plt.legend(["Casual", "Registered"])
     plt.xticks(rotation=0)
 
-    # Tampilkan plot di Streamlit
     st.pyplot(fig)
+
 
     #Analisis lanjutan
     st.subheader("🔍 Analisis Clustering: Pola Penggunaan Sepeda Berdasarkan Kategori Permintaan dan Musim")
