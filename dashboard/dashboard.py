@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
 # 🔹 Konfigurasi tampilan Streamlit
 st.set_page_config(page_title="Bike Sharing Dashboard", layout="wide")
@@ -11,22 +10,21 @@ sns.set_style("darkgrid")
 # 🔹 **Judul Dashboard**
 st.title("📊 Bike Sharing Dashboard: Analisis Penyewaan Sepeda")
 
-# === Load dataset dengan caching untuk efisiensi ===
+# === Load dataset ===
 @st.cache_data
 def load_bike_data():
     try:
-        bike_data = pd.read_csv("dashboard/main_data.csv")  # Pastikan file ada di folder "dashboard"
-        bike_data["dteday"] = pd.to_datetime(bike_data["dteday"])  # Konversi dteday ke datetime
+        bike_data = pd.read_csv("dashboard/main_data.csv")
+        bike_data["dteday"] = pd.to_datetime(bike_data["dteday"])
         return bike_data
     except FileNotFoundError:
         st.error("⚠️ File 'main_data.csv' tidak ditemukan. Pastikan sudah diekspor dengan benar.")
         return None
 
-# 🔹 Memuat data
 bike_df = load_bike_data()
 
 if bike_df is not None:
-    # 🔹 Sidebar untuk filter tanggal
+    # 🔹 Sidebar untuk filter tanggal dan musim
     st.sidebar.header("📅 Filter Data")
     min_date = bike_df["dteday"].min()
     max_date = bike_df["dteday"].max()
@@ -38,155 +36,181 @@ if bike_df is not None:
         value=[min_date, max_date]
     )
 
-    # 🔹 Sidebar untuk filter musim
-    season_mapping = {1: "Semi", 2: "Panas", 3: "Gugur", 4: "Dingin"}
-    bike_df["season_text"] = bike_df["season"].map(season_mapping).astype(str)
-
     selected_seasons = st.sidebar.multiselect(
         label="Pilih Musim",
-        options=list(season_mapping.values()),  
-        default=list(season_mapping.values())  
+        options=bike_df["season_label"].unique().tolist(),  
+        default=bike_df["season_label"].unique().tolist()
     )
 
-    #Konversi `start_date` dan `end_date` ke datetime sebelum filtering
+    # Konversi start_date dan end_date ke datetime sebelum filtering
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
 
-    #Filter Data Berdasarkan Sidebar
+    # Filter Data
     filtered_df = bike_df[
         (bike_df["dteday"] >= start_date) & (bike_df["dteday"] <= end_date) &
-        (bike_df["season_text"].isin(selected_seasons))
+        (bike_df["season_label"].isin(selected_seasons))
     ].copy()
 
-    #Hitung ulang kategori demand setelah filtering
-    filtered_df["demand_category"] = filtered_df["cnt"].apply(
-        lambda cnt: "Low Demand" if cnt <= 300 else ("Medium Demand" if cnt <= 600 else "High Demand")
-    )
-
-    #Hitung ulang kategori musim setelah filtering
-    season_avg = filtered_df.groupby("season")["cnt"].mean().sort_values()
-    if len(season_avg) >= 3:
-        low_season = season_avg.index[0]
-        medium_season = season_avg.index[1]
-        high_season = season_avg.index[2]
-
-        def categorize_season(season):
-            if season == low_season:
-                return "Low Season"
-            elif season == medium_season:
-                return "Medium Season"
-            else:
-                return "High Season"
-
-        filtered_df["season_category"] = filtered_df["season"].apply(categorize_season)
-
-    # 🔹Tampilkan Statistik Sebelum dan Sesudah Filtering
-    st.subheader("📊 Statistik Data Sebelum dan Sesudah Filtering")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("📊 **Statistik Sebelum Filtering**")
-        st.write(bike_df["cnt"].describe())
-
-    with col2:
-        st.write("📊 **Statistik Setelah Filtering**")
-        st.write(filtered_df["cnt"].describe())
-
-    # 🔹Tampilkan 5 Baris Data Setelah Filtering
-    st.subheader("📋 Data yang ditampilkan setelah filtering")
-    st.dataframe(filtered_df.head())
-
-    # 🔹1️⃣ Perbedaan Jumlah Penyewaan: Hari Kerja vs Akhir Pekan
+    # 1️⃣ Perbedaan Jumlah Penyewaan: Hari Kerja vs Akhir Pekan
     st.subheader("🚴‍♂️ Jumlah Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
+    day_type_df = filtered_df.groupby("workingday")["cnt"].sum().reset_index()
+    day_type_df["workingday"] = day_type_df["workingday"].map({0: "Akhir Pekan", 1: "Hari Kerja"})
 
-    if "workingday" in filtered_df.columns:
-        day_type_df = filtered_df.groupby("workingday")["cnt"].sum().reset_index()
-        day_type_df["workingday"] = day_type_df["workingday"].map({0: "Akhir Pekan", 1: "Hari Kerja"})
-
-        fig, ax = plt.subplots(figsize=(9, 5))
-        bars = sns.barplot(x="workingday", y="cnt", data=day_type_df, palette=["#B1D0F0", "#FFA07A"], ax=ax)
-        ax.set_xlabel("Hari")
-        ax.set_ylabel("Jumlah Penyewaan")
-        ax.set_title("Jumlah Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
-        #Tambahkan anotasi di atas batang
-        for bar in bars.patches:
-            ax.annotate(f"{bar.get_height():,.0f}", 
-                        (bar.get_x() + bar.get_width() / 2, bar.get_height()), 
-                        ha='center', va='bottom', fontsize=8, color='gray')
-            
-        st.pyplot(fig)
-
-    # 🔹2️⃣ Jumlah Penyewaan Sepeda Berdasarkan Musim
-    st.subheader("🌦️ Jumlah Penyewaan Sepeda Berdasarkan Musim")
-
-    if "season" in filtered_df.columns:
-        season_df = filtered_df.groupby("season")["cnt"].sum().reset_index()
-        season_df["season"] = season_df["season"].map(season_mapping)
-
-        #Menentukan musim dengan jumlah penyewaan tertinggi
-        max_season = season_df.loc[season_df["cnt"].idxmax(), "season"]
-
-        #Menentukan warna: Soroti musim dengan penyewaan tertinggi (merah), lainnya abu-abu
-        colors = ["#FF9999" if season != max_season else "#CC0000" for season in season_df["season"]]
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        bars = sns.barplot(x="season", y="cnt", data=season_df, palette=colors, ax=ax)
-
-        ax.set_xlabel("Musim")
-        ax.set_ylabel("Jumlah Penyewaan")
-        ax.set_title("Jumlah Penyewaan Sepeda Berdasarkan Musim")
-
-        #Tambahkan anotasi di atas batang
-        for bar, season in zip(bars.patches, season_df["season"]):
-            ax.annotate(f"{bar.get_height():,.0f}", 
-                        (bar.get_x() + bar.get_width() / 2, bar.get_height()), 
-                        ha='center', va='bottom', fontsize=8, 
-                        color='black' if season == max_season else 'gray')
-
-        st.pyplot(fig)
-
-
-    # 🔹3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar Berdasarkan Hari Kerja dan Akhir Pekan
-    st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar Berdasarkan Hari Kerja dan Akhir Pekan")
-
-    if {"workingday", "casual", "registered"}.issubset(filtered_df.columns):
-        casual_registered_df = filtered_df.groupby("workingday")[["casual", "registered"]].sum().reset_index()
-        casual_registered_df["workingday"] = casual_registered_df["workingday"].map({0: "Akhir Pekan", 1: "Hari Kerja"})
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        casual_registered_df.set_index("workingday").plot(kind="bar", stacked=True, colormap="viridis", ax=ax)
-        ax.set_xlabel("Hari")
-        ax.set_ylabel("Jumlah Penyewaan")
-        ax.set_title("Pola Penyewaan Sepeda Berdasarkan Hari Kerja vs Akhir Pekan")
-        plt.legend(["Casual", "Registered"])
-        st.pyplot(fig)
-
-    # 🔹 **Analisis Clustering: Permintaan Sepeda Berdasarkan Kategori dan Musim**
-    st.subheader("🔍 Analisis Clustering: Permintaan Sepeda Berdasarkan Kategori dan Musim")
-
-    st.write("Analisis ini bertujuan untuk memahami pola permintaan sepeda dengan mengelompokkan data ke dalam beberapa kategori berdasarkan jumlah permintaan dan musim. Dengan clustering ini, kita dapat melihat bagaimana permintaan sepeda bervariasi berdasarkan musim dan kategori permintaan.")
-
-    # 🔹4️⃣ Distribusi Kategori Demand
-    st.subheader("📊 Distribusi Kategori Demand")
-    demand_distribution = filtered_df["demand_category"].value_counts()
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    sns.barplot(x=demand_distribution.index, y=demand_distribution.values, palette="coolwarm", ax=ax)
-    ax.set_xlabel("Kategori Demand")
-    ax.set_ylabel("Jumlah Hari")
-    ax.set_title("Distribusi Kategori Demand")
+    fig, ax = plt.subplots(figsize=(9, 5))
+    sns.barplot(x="workingday", y="cnt", data=day_type_df, ax=ax)
+    ax.set_xlabel("Kategori Hari")
+    ax.set_ylabel("Total Penyewaan Sepeda")
+    ax.set_title("Jumlah Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
     st.pyplot(fig)
 
-    # 🔹5️⃣ Distribusi Demand Berdasarkan Musim
-    if "season_category" in filtered_df.columns:
+    # Pie Chart: Proporsi Penyewaan Sepeda Hari Kerja vs Akhir Pekan
+    st.subheader("📊 Proporsi Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.pie(
+        day_type_df["cnt"],
+        labels=day_type_df["workingday"],
+        autopct="%1.1f%%",
+        colors=["#72BCD4", "#FFA07A"],
+        startangle=140
+    )
+    ax.set_title("Proporsi Penyewaan Sepeda: Hari Kerja vs Akhir Pekan")
+    st.pyplot(fig)
+
+
+    # 2️⃣ Jumlah Penyewaan Berdasarkan Musim
+    st.subheader("🌦️ Jumlah Penyewaan Sepeda Berdasarkan Musim (Season)")
+
+    # Mengelompokkan data berdasarkan musim dan menghitung total penyewaan
+    season_df = filtered_df.groupby("season_label", observed=False)["cnt"].sum().reset_index()
+
+    # Menentukan urutan musim yang benar (agar sesuai dengan visualisasi sebelumnya)
+    season_order = ["Winter", "Spring", "Summer", "Fall"]
+    season_df["season_label"] = pd.Categorical(season_df["season_label"], categories=season_order, ordered=True)
+    season_df = season_df.sort_values("season_label")
+
+    # Menentukan warna dengan highlight pada musim dengan penyewaan tertinggi
+    highlight_color = "#D62728"  # Warna untuk penyewaan tertinggi (merah)
+    base_color = "#FFA07A"  # Warna dasar lebih soft (peach)
+
+    # Menentukan musim dengan penyewaan tertinggi
+    max_season = season_df.loc[season_df["cnt"].idxmax(), "season_label"]
+    colors = [highlight_color if season == max_season else base_color for season in season_df["season_label"]]
+
+    # Membuat visualisasi bar chart
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(
+        data=season_df,
+        x="season_label",
+        y="cnt",
+        palette=colors,
+        ax=ax
+    )
+
+    # Menambahkan label dan judul dengan ukuran yang lebih besar
+    ax.set_xlabel("Season", fontsize=12)
+    ax.set_ylabel("Jumlah Penyewaan", fontsize=12)
+    ax.set_title("Jumlah Penyewaan Sepeda Berdasarkan Musim (Season)", fontsize=16)
+
+    # Menampilkan plot di Streamlit
+    st.pyplot(fig)
+
+
+    # 3️⃣ Pola Penyewaan Sepeda: Kasual vs Terdaftar
+    st.subheader("👥 Pola Penyewaan Sepeda: Kasual vs Terdaftar Berdasarkan Hari Kerja vs Akhir Pekan")
+
+    # Kelompokkan data berdasarkan hari kerja vs akhir pekan
+    casual_registered_df = filtered_df.groupby("workingday", observed=True)[["casual", "registered"]].sum().reset_index()
+
+    # Ganti angka workingday dengan label yang lebih jelas
+    casual_registered_df["workingday"] = casual_registered_df["workingday"].map({0: "Akhir Pekan", 1: "Hari Kerja"})
+
+    # Plot stacked bar chart
+    fig, ax = plt.subplots(figsize=(8, 5))
+    casual_registered_df.set_index("workingday").plot(kind="bar", stacked=True, colormap="viridis", ax=ax)
+
+    # Tambahkan label dan judul
+    ax.set_xlabel("Kategori Hari")
+    ax.set_ylabel("Jumlah Penyewaan")
+    ax.set_title("Pola Penyewaan Sepeda Berdasarkan Hari Kerja vs Akhir Pekan")
+
+    # Tambahkan legenda
+    plt.legend(["Casual", "Registered"])
+    plt.xticks(rotation=0)
+
+    # Tampilkan plot di Streamlit
+    st.pyplot(fig)
+
+    #Analisis lanjutan
+    st.subheader("🔍 Analisis Clustering: Pola Penggunaan Sepeda Berdasarkan Kategori Permintaan dan Musim")
+    # 4️⃣ Clustering: Distribusi Kategori Demand
+    st.subheader("📊 Distribusi Kategori Demand")
+
+    # Mengubah demand_distribution menjadi DataFrame agar kompatibel dengan Seaborn
+    demand_distribution_df = filtered_df["demand_category"].value_counts().reset_index()
+    demand_distribution_df.columns = ["demand_category", "count"]  # Ubah nama kolom agar sesuai
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.barplot(
+        data=demand_distribution_df,
+        x="demand_category",
+        y="count",
+        hue="demand_category",
+        legend=False,
+        palette={"Low Demand": "#72BCD4", "Medium Demand": "#FFA07A", "High Demand": "#D72638"},
+        ax=ax
+    )
+
+    ax.set_title("Distribusi Kategori Demand")
+    ax.set_xlabel("Kategori Demand")
+    ax.set_ylabel("Jumlah Jam")
+
+    st.pyplot(fig)
+
+    # 5️⃣ Clustering: Distribusi Kategori Musim
+    st.subheader("🌦️ Distribusi Kategori Musim")
+
+    # Mengubah season_distribution menjadi DataFrame agar kompatibel dengan Seaborn
+    season_distribution_df = filtered_df["season_category"].value_counts().reset_index()
+    season_distribution_df.columns = ["season_category", "count"]  # Ubah nama kolom agar sesuai
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.barplot(
+        data=season_distribution_df,
+        x="season_category",
+        y="count",
+        hue="season_category",
+        legend=False,
+        palette={"Low Season": "#3A7D44", "Medium Season": "#EFCB68", "High Season": "#D72638"},
+        ax=ax
+    )
+
+    ax.set_title("Distribusi Kategori Musim")
+    ax.set_xlabel("Kategori Musim")
+    ax.set_ylabel("Jumlah Jam")
+
+    st.pyplot(fig)
+
+
+    # 6️⃣ Permintaan Sepeda Berdasarkan Musim
+    st.subheader("🔍 Permintaan Sepeda Berdasarkan Musim")
+
+    # Pastikan 'season_category' dan 'demand_category' ada di data sebelum visualisasi
+    if "season_category" in filtered_df.columns and "demand_category" in filtered_df.columns:
         season_demand = filtered_df.groupby("season_category")["demand_category"].value_counts().unstack()
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        season_demand.plot(kind="bar", stacked=True, colormap="magma", ax=ax)
-        ax.set_xlabel("Kategori Musim")
-        ax.set_ylabel("Jumlah Hari")
+        season_demand.plot(kind="bar", stacked=True, colormap="viridis", ax=ax)
+
         ax.set_title("Permintaan Sepeda Berdasarkan Musim")
-        plt.legend(title="Demand Category")
+        ax.set_xlabel("Kategori Musim")
+        ax.set_ylabel("Jumlah Jam")
+        ax.legend(title="Demand Category")
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+
         st.pyplot(fig)
 
-    # **Footer Dashboard**
+
+    #Footer Dashboard
     st.caption("📌 Bike Sharing Dashboard | Dataset by [Kaggle - Bike Sharing Dataset](https://www.kaggle.com/datasets/lakshmi25npathi/bike-sharing-dataset)")
