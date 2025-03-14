@@ -7,7 +7,7 @@ import seaborn as sns
 st.set_page_config(page_title="Bike Sharing Dashboard", layout="wide")
 sns.set_style("darkgrid")
 
-# 🔹 **Judul Dashboard**
+# Judul Dashboard
 st.title("📊 Bike Sharing Dashboard: Analisis Penyewaan Sepeda")
 
 # === Load dataset ===
